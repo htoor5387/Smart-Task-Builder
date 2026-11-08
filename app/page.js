@@ -77,7 +77,7 @@ export default function Home() {
 
         {activeGoal && (
             <div className="bg-slate-800 p-4 rounded-xl text-xl font-bold">
-              My goal is to {activeGoal}
+              Your Goal: {activeGoal}
             </div>
         )}
         
