@@ -1,0 +1,240 @@
+Digital Sidekick
+This project is a web application that asks a person what their to-do list is today, breaks it down into smaller, specifc tasks and tracks their progress with a progress bar that gives food to our digital sidekick once full.
+
+Why I built this project: I wanted to make the daily grind of life into a fun game that psychologically motivates users to complete their to-do lists.
+
+Purpose: To get experience using Node.js, React and implement Gemini's API . The About me contains a detailed step by step tutorial of how the web application was built.
+
+Digital Sidekick is built with: 
+React - Front End: User inputs, XP progress bar, avatar
+Node.js - Backend: Recieves input and communicatees with gemini
+Gemini API - generates personalized 
+
+
+Step by step building of project:
+1) NODE.js
+To build Node.js project:
+npx.cmd create-next-app@latest digital_sidekick
+
+npx.cmd - Runs a command provided by an npm package
+create - next-app-Official project generator for Next.js
+@latest -Selects the latest published version
+sidequest - Name of the new project folder
+
+Project settings:
+JavaScript -familiar syntax
+ESLint - Helps identify coding errors and questionable patterns
+No React Compiler - Reduces setup complexity
+Tailwind CSS - Allows fast styling without writing lots of CSS
+ex:
+<button className="bg-blue-500 text-white p-3 rounded-lg">
+
+No src/ directory - Keeps folder paths simple
+App Router - Modern Next.js routing and server architecture
+Default import alias - Avoids additional configuration
+
+Folder structure
+app/page.js -Defines the content of your home page. Main interface built here.
+
+app/layout.js -Defines the shared layout surrounding your pages.
+
+app/globals.css - Contains application-wide styles and Tailwind setup.
+
+public/ - Stores publicly served files, such as images and icons.
+
+package.json - Lists dependencies, project metadata, and scripts.
+
+node_modules/ - Contains installed npm dependencies.
+
+.gitignore -Tells Git which files and folders should not be tracked.
+
+app/api/quests/route.js.- contain server-side JavaScript for communicating with Gemini.
+
+To run project in a local dev server:
+cd digital_sidekick
+npm.cmd run dev
+where
+npm.cmd - starts npm
+run - tells npm to execute a script defined in package.json
+dev - name of the development script.
+
+
+2) React
+Builds the interactable components of the page
+
+In page.js
+
+export default function Home() {
+  return <h1>Welcome to Digital Sidekick!</h1>;
+}
+
+Where:
+function Home() - JavaScript function called Home 
+return - displays h1 interface using react.
+export default Home - allows nect.js to use component
+
+
+Next.js - uses server components by default
+To add interactivity (state and event handlers):
+-"use client"
+
+This allows us to use hooks like useState, useEffect, etc:
+-import { useState } from "react";
+
+State variables in function Home():
+-const [goal, setGoal] = useState("");
+-const [activeTask, setActiveTask] = useState("");
+-const [aiMessage, setAiMessage] = useState("");
+-const [loading, setLoading] = useState(false);
+-const [error, setError] = useState("");
+
+Creates a state that react can store and update
+Where
+goal - Current state
+setGoal - Function that updates state
+useState("") - inits state as empty string
+
+activeGoal - stores the goal the user has submitted.
+setActiveTask - updates goal
+
+aiMessage - stores ai generated text
+loading - indicates if a request in prog
+error - stores error message if response fails
+
+
+Event handlers:
+
+-onChange={(event) => setGoal(event.target.value)} -> call setgoal func, which updates goal as we type
+-onClick={setActiveGoal(goal);} -> on button press, calls setActiveGoal which updates activeGoal
+
+How it works:
+user types input
+onChange event fires
+setgoal update the state variable 'goal' with user input
+event.target.value - user input
+
+Functions:
+async function handleStart(){..}
+we store our input, send a message to gemini, get a response, and display that response
+async-allows to use wait
+
+await fetch(..) - send http get request to backend endpoint
+response.ok - check if http req succeeded
+const data = await response.json() - parse response as json, reads into data
+setAiMessage(data.message) - store gemini response in react state, triggers re redner 
+finally - resets loading state
+
+
+Conditional rendering:
+
+-conditionally display JSX using the && operator
+{activeGoal && (
+  <p>Your goal: {activeGoal}</p>
+)}
+
+once we click button, activeGoal updates and displaying our goal on the page
+
+
+Gemini API integeration:
+
+React frontend -> Next.js API route -> Gemini API
+
+Data flow
+User clicks button - execute handleStart()
+fetch('/api/') - Browser sends GET request to Next.js backend
+Backend calls gemini - AI generates message
+React updates states - setAiMessage() called
+Message appear - JSX diplays ai response
+
+Steps to install gemini sdk
+1. In termninal: npm.cmd install @google/genai
+2. Get api key from google AI studio
+3. create .env.local file in root folder and add api key
+GEMINI_API_KEY=your_api_key_here
+4. .gitignore contains .env*
+
+
+Then create backend api route
+digital_sidekick/app/api/goals/route.js
+
+now import our gemini API 
+-import { GoogleGenAI } from "@google/genai";
+
+and create gemini client with our api key
+=-const ai = new GoogleGenAI({..});
+
+
+To send input to gemini API:
+POST - Sends data to be processed
+export async function POST(request) - accepts http post req
+
+-const { goal } = await request.json();
+Extracts the state variable goal from the json request body
+
+Error checking input:
+-if (typeof goal !== "string" || !goal.trim() || goal.length > 500 ){} 
+goal should be of type string, < 500 words
+
+
+Generating response from API:
+I used legacy
+-await ai.models.generateContent(...)	
+To send the prompt and wait for the response
+in generateContent()
+-content:
+contains our prompt
+
+TODO:
+Implement newer API ai.interactions.create 
+await ai.interactions.create({
+  model: "gemini-3.8-flash",
+  input: `Create 3 tasks for ${goal}`,
+  store: false
+});
+
+Use a prompt to generate our list of tasks in a specific format:
+"Welcome the user in one sentence, then examine the users goal:" + {goal} 
++ "create a list of max 5 small, specific tasks to accomplish said goal." + 
+"Use the SMART framework (Specific, Measurable, Achievable, Relevant, and Time-bound) as a guideline to building tasks." + 
+"Return 1 task per line, and each task must be under 100 characters." 
+BUG: This does not generate our desired list of 3 tasks to put in an array
+
+Format response from API into an array of tasks:
+ const tasks = (response.text ?? "") ->
+      .split("\n")  ->split string into array when it encounters new line
+      .map(line => line.trim()) ->remove whitespace
+      .filter(Boolean)  ->removes empty string
+      .slice(0, 5);   -> returns elements at indeces 0-5
+
+    if (takss.length <= 5) {
+      throw new Error("Expected at most 5 quests");
+    }
+
+
+Then to get the generated reponse from gemini:
+-response.text
+Extracts Gemini's generated text
+
+-.split("\n")
+seperates the output into individual lines, to create a list of quests
+
+-Response.json(...)
+Returns the result to your browser
+
+To handle failures without crashing the application
+-catch(error)
+
+
+Problems:
+WHen loading repsonse form AI, we failed to generate a response. Recieved following error:
+"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE" "
+FIX:  switched to gemini-3.5-flash-lite
+
+When generating a list of tasks, AI would generate an introductory sentence before creating a task list. Therefore we are not getting an array of 3 tasks but 1 introductory
+sentence and 2 tasks
+
+FIX: Reworded the prompt to output exaclty 3 lines of tasks
+
+Future Features:
+An XP bar showing the progress of the objectives
+Add more tasks to task list
